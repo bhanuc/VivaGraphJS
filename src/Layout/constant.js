@@ -23,18 +23,19 @@ Viva.Graph.Layout.constant = function (graph, userSettings) {
             return new Viva.Graph.Point2d(rand.next(userSettings.maxX), rand.next(userSettings.maxY));
         },
 
-        updateGraphRect = function (node, graphRect) {
-            if (node.position.x < graphRect.x1) { graphRect.x1 = node.position.x; }
-            if (node.position.x > graphRect.x2) { graphRect.x2 = node.position.x; }
-            if (node.position.y < graphRect.y1) { graphRect.y1 = node.position.y; }
-            if (node.position.y > graphRect.y2) { graphRect.y2 = node.position.y; }
+        updateGraphRect = function (position, graphRect) {
+            if (position.x < graphRect.x1) { graphRect.x1 = position.x; }
+            if (position.x > graphRect.x2) { graphRect.x2 = position.x; }
+            if (position.y < graphRect.y1) { graphRect.y1 = position.y; }
+            if (position.y > graphRect.y2) { graphRect.y2 = position.y; }
         },
 
+        layoutNodes = typeof Object.create === 'function' ? Object.create(null) : {},
+
         ensureNodeInitialized = function (node) {
-            if (!node.hasOwnProperty('position')) {
-                node.position = placeNodeCallback(node);
-            }
-            updateGraphRect(node, graphRect);
+            if (!node) { return; }
+            layoutNodes[node.id] = placeNodeCallback(node);
+            updateGraphRect(layoutNodes[node.id], graphRect);
         },
 
         updateNodePositions = function () {
@@ -51,16 +52,17 @@ Viva.Graph.Layout.constant = function (graph, userSettings) {
         onGraphChanged = function(changes) {
             for (var i = 0; i < changes.length; ++i) {
                 var change = changes[i];
-                if (change.changeType === 'add' && change.node) {
-                    ensureNodeInitialized(change.node);
+                if (change.node) {
+                    if (change.changeType === 'add') {
+                        ensureNodeInitialized(change.node);
+                    } else {
+                        delete layoutNodes[change.node.id];
+                    }
                 }
             }
-        },
-
-        initLayout = function () {
-            updateNodePositions();
-            graph.addEventListener('changed', onGraphChanged);
         };
+
+    graph.addEventListener('changed', onGraphChanged);
 
     return {
         /**
@@ -79,7 +81,7 @@ Viva.Graph.Layout.constant = function (graph, userSettings) {
         step : function () {
             updateNodePositions();
 
-            return false; // no need to continue.
+            return true; // no need to continue.
         },
 
         /**
@@ -95,6 +97,58 @@ Viva.Graph.Layout.constant = function (graph, userSettings) {
          */
         dispose : function () {
             graph.removeEventListener('change', onGraphChanged);
+        },
+
+        /*
+         * Checks whether given node is pinned; all nodes in this layout are pinned.
+         */
+        isNodePinned: function (node) {
+            return true;
+        },
+
+        /*
+         * Requests layout algorithm to pin/unpin node to its current position
+         * Pinned nodes should not be affected by layout algorithm and always
+         * remain at their position
+         */
+        pinNode: function (node, isPinned) {
+           // noop
+        },
+
+        /*
+         * Gets position of a node by its id. If node was not seen by this
+         * layout algorithm undefined value is returned;
+         */
+        getNodePosition: function (nodeId) {
+            var pos = layoutNodes[nodeId];
+            if (!pos) {
+                ensureNodeInitialized(graph.getNode(nodeId));
+            }
+            return pos;
+        },
+
+        /**
+         * Returns {from, to} position of a link.
+         */
+        getLinkPosition: function (link) {
+            var from = this.getNodePosition(link.fromId),
+                to = this.getNodePosition(link.toId);
+
+            return {
+                from : from,
+                to : to
+            };
+        },
+
+        /**
+         * Sets position of a node to a given coordinates
+         */
+        setNodePosition: function (node, x, y) {
+            var pos = layoutNodes[node.id];
+            if (pos) {
+                pos.x = x;
+                pos.y = y;
+            }
         },
 
         // Layout specific methods:

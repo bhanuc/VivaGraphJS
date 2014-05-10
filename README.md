@@ -1,14 +1,12 @@
-VivaGraphJS - JavaScript Graph Drawing Library
+Graph Drawing Library
 ==================================================
 **VivaGraphJS** is a free [graph drawing](http://en.wikipedia.org/wiki/Graph_drawing) library for JavaScript.
 It is designed to be extensible and to support different rendering engines and layout algorithms. At the moment
-it supports rendering graphs using WebGL, SVG or CSS formats. Layout algorithms currently implemented are:
+it supports rendering graphs using WebGL, SVG or CSS formats.
 
-* [Force Directed](http://en.wikipedia.org/wiki/Force-based_algorithms_\(graph_drawing\)) - based on Barnes-Hut
-simulation and optimized for JavaScript language this algorithm gives `N * lg(N) + V` performance per iteration. 
-
-Library provides API which tracks graph changes and reflect changes on the rendering surface
-accordingly.
+**Note:** Please visit [anvaka/ngraph](https://github.com/anvaka/ngraph) to check
+next evolution step of this library. `ngraph` supports rendering graphs to images,
+3d graphs rendering, integration with [gephi](https://gephi.org/) and more.
 
 
 Enough talking. Show me the demo!
@@ -165,6 +163,11 @@ npm install
 grunt
 ```
 The combined/minified code should be stored in ```dist``` folder.
+
+Upgrade guide
+-------------
+
+Please refer the [upgrade guide](https://github.com/anvaka/VivaGraphJS/blob/master/docs/upgrade_guide.md) to see how to update older versions of the library to the latest one.
 
 
 I need your feedback

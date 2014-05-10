@@ -22,8 +22,10 @@ Viva.Graph.graph = function () {
     // in terms of memory, but simplifies coding. Furthermore, the graph structure
     // is isolated from outter world, and can be changed to adjacency matrix later.
 
-    var nodes = {},
+    var nodes = (typeof Object.create === 'function') ? Object.create(null) : {},
         links = [],
+        // Hash of multi-edges. Used to track ids of edges between same nodes
+        multiEdges = {},
         nodesCount = 0,
         suspendEvents = 0,
 
@@ -60,14 +62,6 @@ Viva.Graph.graph = function () {
         recordLinkChange = function (link, changeType) {
             // TODO: Could add change type verification;
             changes.push({link : link, changeType : changeType});
-        },
-
-        isArray = function (value) {
-            return value &&
-                   typeof value === 'object' &&
-                   typeof value.length === 'number' &&
-                   typeof value.splice === 'function' &&
-                   !(value.propertyIsEnumerable('length'));
         };
 
     /** @scope Viva.Graph.graph */
@@ -102,26 +96,7 @@ Viva.Graph.graph = function () {
                 recordNodeChange(node, 'update');
             }
 
-            if (data) {
-                var augmentedData = node.data || {},
-                    dataType = typeof data,
-                    name;
-
-                if (dataType === 'string' || isArray(data) ||
-                        dataType === 'number' || dataType === 'boolean') {
-                    augmentedData = data;
-                } else if (dataType === 'undefined') {
-                    augmentedData = null;
-                } else {
-                    for (name in data) {
-                        if (data.hasOwnProperty(name)) {
-                            augmentedData[name] = data[name];
-                        }
-                    }
-                }
-
-                node.data = augmentedData;
-            }
+            node.data = data;
 
             nodes[nodeId] = node;
 
@@ -146,7 +121,16 @@ Viva.Graph.graph = function () {
             var fromNode = this.getNode(fromId) || this.addNode(fromId);
             var toNode = this.getNode(toId) || this.addNode(toId);
 
-            var link = new Viva.Graph.Link(fromId, toId, data);
+            var linkId = fromId.toString() +'👉 ' + toId.toString();
+            var isMultiEdge = multiEdges.hasOwnProperty(linkId);
+            if (isMultiEdge || this.hasLink(fromId, toId)) {
+                if (!isMultiEdge) {
+                    multiEdges[linkId] = 0;
+                }
+                linkId += '@' + (++multiEdges[linkId]);
+            }
+
+            var link = new Viva.Graph.Link(fromId, toId, data, linkId);
 
             links.push(link);
 
@@ -285,11 +269,8 @@ Viva.Graph.graph = function () {
             // TODO: could it be faster for nodes iteration if we had indexed access?
             // I.e. use array + 'for' iterator instead of dictionary + 'for .. in'?
             for (node in nodes) {
-                // For performance reasons you might want to sacrifice this sanity check:
-                if (nodes.hasOwnProperty(node)) {
-                    if (callback(nodes[node])) {
-                        return; // client doesn't want to proceed. return.
-                    }
+                if (callback(nodes[node])) {
+                    return; // client doesn't want to proceed. return.
                 }
             }
         },
@@ -340,9 +321,9 @@ Viva.Graph.graph = function () {
          *  data - additional data passed to graph.addLink() method.
          */
         forEachLink : function (callback) {
-            var i;
+            var i, length;
             if (typeof callback === 'function') {
-                for (i = 0; i < links.length; ++i) {
+                for (i = 0, length = links.length; i < length; ++i) {
                     callback(links[i]);
                 }
             }
